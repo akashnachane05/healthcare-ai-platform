@@ -42,23 +42,39 @@ exports.registerUser = async (req, res) => {
 
 // Login User
 exports.loginUser = async (req, res) => {
-  const { email, password, role } = req.body;
+  const { email, password } = req.body;
 
   try {
-    const user = await (role === "Doctor" ? Doctor : Patient).findOne({ email });
-    if (!user) return res.status(404).json({ message: `${role} not found` });
+    // Check if the user exists in Doctor collection
+    let user = await Doctor.findOne({ email }).select("+password"); // Ensure password is retrieved
 
+    if (!user) {
+      // If not found, check in Patient collection
+      user = await Patient.findOne({ email }).select("+password");
+    }
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Compare entered password with hashed password in DB
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
+    // Determine role from user object
+    const role = user instanceof Doctor ? "Doctor" : "Patient";
+
+    // Send response with token
     res.json({
       _id: user._id,
       name: user.name,
       email: user.email,
       role,
-      token: generateToken(user._id, role),
+      token: generateToken(user._id, role), // JWT token
     });
+
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    console.error(error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+

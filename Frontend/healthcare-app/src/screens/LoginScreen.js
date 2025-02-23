@@ -16,7 +16,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { t } from "react-native-tailwindcss";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
 const API_URL = "http://10.0.2.2:5000/api/auth";
 const { width } = Dimensions.get("window");
 
@@ -40,7 +39,7 @@ const LoginScreen = ({ navigation }) => {
     const token = await AsyncStorage.getItem("token");
     const role = await AsyncStorage.getItem("role");
     if (token && role) {
-      navigation.replace(role === "Doctor" ? "DoctorDashboard" : "PatientDashboard");
+      navigation.replace(role === "Doctor" ? "Dashboard" : "Dashboard");
     }
   };
 
@@ -56,7 +55,10 @@ const LoginScreen = ({ navigation }) => {
       if (!response.ok) throw new Error(data.message || "Login failed");
       await AsyncStorage.setItem("token", data.token);
       await AsyncStorage.setItem("role", data.role);
-      navigation.replace(data.role === "Doctor" ? "DoctorDashboard" : "PatientDashboard");
+      if (response.ok) {
+        navigation.replace(data.role === "Doctor" ? "Dashboard" : "Dashboard");
+      }
+    
     } catch (error) {
       Alert.alert("Login Failed", error.message);
     } finally {
