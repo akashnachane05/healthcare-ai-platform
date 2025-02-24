@@ -1,5 +1,4 @@
 
-
 import { useEffect, useRef } from "react"
 import { View, Text, Image, TouchableOpacity, Animated, Easing, Dimensions } from "react-native"
 import { LinearGradient } from "expo-linear-gradient"

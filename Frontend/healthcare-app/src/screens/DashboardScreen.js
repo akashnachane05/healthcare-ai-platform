@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, Dimensions, Animated, TouchableOpacity, Modal, TextInput } from "react-native";
-import { Text, Avatar, Badge, IconButton, Button } from "react-native-paper";
+import { Text, Avatar, Badge, IconButton, Button, Portal ,Dialog} from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LineChart } from "react-native-chart-kit";
@@ -15,7 +15,7 @@ export default function PatientDashboard() {
   const [selectedVital, setSelectedVital] = useState('heart');
   const [showAddSymptom, setShowAddSymptom] = useState(false);
   const [newSymptom, setNewSymptom] = useState({ name: '', severity: '', notes: '' });
-  const [customSymptoms, setCustomSymptoms] = useState([]);
+  const [symptoms, setSymptoms] = useState([]);
 
   const healthVitals = [
     { 
@@ -66,7 +66,43 @@ export default function PatientDashboard() {
     }
   ];
 
-  const allVitals = [...healthVitals, ...customSymptoms];
+  const handleAddSymptom = () => {
+    if (!newSymptom.name || !newSymptom.severity) {
+      return;
+    }
+
+    const severity = parseInt(newSymptom.severity);
+    if (isNaN(severity) || severity < 1 || severity > 10) {
+      return;
+    }
+
+    const newCustomSymptom = {
+      id: `symptom-${Date.now()}`,
+      icon: "alert-circle",
+      label: newSymptom.name,
+      value: newSymptom.severity,
+      unit: "severity",
+      status: severity > 7 ? "warning" : "normal",
+      bgColor: severity > 7 ? "bg-red-50" : "bg-yellow-50",
+      iconColor: severity > 7 ? "text-red-500" : "text-yellow-500",
+      notes: newSymptom.notes,
+      trend: [severity],
+      isCustom: true
+    };
+    
+    setSymptoms([...symptoms, newCustomSymptom]);
+    setNewSymptom({ name: '', severity: '', notes: '' });
+    setShowAddSymptom(false);
+  };
+
+  const handleDeleteSymptom = (symptomId) => {
+    setSymptoms(symptoms.filter(symptom => symptom.id !== symptomId));
+    if (selectedVital === symptomId) {
+      setSelectedVital('heart');
+    }
+  };
+
+  const allVitals = [...healthVitals, ...symptoms];
 
   const quickActions = [
     {
@@ -96,78 +132,52 @@ export default function PatientDashboard() {
   ];
 
   const AddSymptomModal = () => (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={showAddSymptom}
-      onRequestClose={() => setShowAddSymptom(false)}
+    <Portal
+      // animationType="slide"
+      // transparent={true}
+      // visible={showAddSymptom}
+      // onRequestClose={() => {
+      //   setNewSymptom({ name: '', severity: '', notes: '' });
+      //   setShowAddSymptom(false);
+      // }}
     >
-      <View style={tw`flex-1 justify-center items-center bg-black bg-opacity-50`}>
-        <View style={tw`bg-white w-5/6 rounded-xl p-4`}>
-          <Text style={tw`text-xl font-bold mb-4`}>Add New Symptom</Text>
-          
-          <Text style={tw`text-gray-600 mb-2`}>Symptom Name</Text>
-          <TextInput
-            style={tw`border border-gray-300 rounded-lg p-2 mb-4`}
-            placeholder="Enter symptom name"
-            value={newSymptom.name}
-            onChangeText={(text) => setNewSymptom({...newSymptom, name: text})}
-          />
-          
-          <Text style={tw`text-gray-600 mb-2`}>Severity (1-10)</Text>
-          <TextInput
-            style={tw`border border-gray-300 rounded-lg p-2 mb-4`}
-            placeholder="Enter severity (1-10)"
-            keyboardType="numeric"
-            value={newSymptom.severity}
-            onChangeText={(text) => setNewSymptom({...newSymptom, severity: text})}
-          />
-          
-          <Text style={tw`text-gray-600 mb-2`}>Notes</Text>
-          <TextInput
-            style={tw`border border-gray-300 rounded-lg p-2 mb-4 h-20`}
-            placeholder="Add any additional notes"
-            multiline
-            value={newSymptom.notes}
-            onChangeText={(text) => setNewSymptom({...newSymptom, notes: text})}
-          />
-
-          <View style={tw`flex-row justify-end`}>
-            <Button 
-              onPress={() => setShowAddSymptom(false)} 
-              style={tw`mr-2`}
-            >
-              Cancel
-            </Button>
-            <Button 
-              mode="contained"
-              style={tw`bg-blue-500`}
-              onPress={() => {
-                const newCustomSymptom = {
-                  id: `symptom-${Date.now()}`,
-                  icon: "alert-circle",
-                  label: newSymptom.name,
-                  value: newSymptom.severity,
-                  unit: "severity",
-                  status: parseInt(newSymptom.severity) > 7 ? "warning" : "normal",
-                  bgColor: parseInt(newSymptom.severity) > 7 ? "bg-red-50" : "bg-yellow-50",
-                  iconColor: parseInt(newSymptom.severity) > 7 ? "text-red-500" : "text-yellow-500",
-                  notes: newSymptom.notes,
-                  trend: [parseInt(newSymptom.severity)],
-                  isCustom: true
-                };
-                
-                setCustomSymptoms([...customSymptoms, newCustomSymptom]);
-                setNewSymptom({ name: '', severity: '', notes: '' });
-                setShowAddSymptom(false);
+        <Dialog visible={showAddSymptom} onDismiss={() => setShowAddSymptom(false)}>
+          <Dialog.Title>Add New Symptom</Dialog.Title>
+          <Dialog.Content>
+            <TextInput
+              style={tw`border border-gray-300 rounded-lg p-2 mb-4`}
+              placeholder="Enter symptom name"
+              value={newSymptom.name}
+              onChangeText={(text) => setNewSymptom({ ...newSymptom, name: text })}
+            />
+            <TextInput
+              style={tw`border border-gray-300 rounded-lg p-2 mb-4`}
+              placeholder="Enter severity (1-10)"
+              keyboardType="numeric"
+              value={newSymptom.severity}
+              onChangeText={(text) => {
+                const value = parseInt(text);
+                if (!text || (value >= 1 && value <= 10)) {
+                  setNewSymptom({ ...newSymptom, severity: text });
+                }
               }}
-            >
+            />
+            <TextInput
+              style={tw`border border-gray-300 rounded-lg p-2 mb-4 h-20`}
+              placeholder="Add any additional notes"
+              multiline
+              value={newSymptom.notes}
+              onChangeText={(text) => setNewSymptom({ ...newSymptom, notes: text })}
+            />
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setShowAddSymptom(false)}>Cancel</Button>
+            <Button mode="contained" onPress={handleAddSymptom} disabled={!newSymptom.name || !newSymptom.severity}>
               Add Symptom
             </Button>
-          </View>
-        </View>
-      </View>
-    </Modal>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
   );
 
   const VitalCard = ({ vital, onPress, isSelected }) => (
@@ -177,8 +187,18 @@ export default function PatientDashboard() {
         ${vital.status === 'warning' ? 'border-l-4 border-red-500' : 'border-l-4 border-green-500'}
         ${isSelected ? 'border border-blue-200' : ''}`}
     >
-      <View style={tw`${vital.bgColor} w-12 h-12 rounded-full items-center justify-center mb-3`}>
-        <MaterialCommunityIcons name={vital.icon} size={24} style={tw`${vital.iconColor}`} />
+      <View style={tw`flex-row justify-between items-start`}>
+        <View style={tw`${vital.bgColor} w-12 h-12 rounded-full items-center justify-center mb-3`}>
+          <MaterialCommunityIcons name={vital.icon} size={24} style={tw`${vital.iconColor}`} />
+        </View>
+        {vital.isCustom && (
+          <TouchableOpacity 
+            onPress={() => handleDeleteSymptom(vital.id)}
+            style={tw`p-1`}
+          >
+            <MaterialCommunityIcons name="close" size={20} style={tw`text-gray-400`} />
+          </TouchableOpacity>
+        )}
       </View>
       <Text style={tw`text-gray-600 text-sm mb-1`}>{vital.label}</Text>
       <View style={tw`flex-row items-baseline`}>
@@ -195,46 +215,47 @@ export default function PatientDashboard() {
       )}
     </TouchableOpacity>
   );
-
-  const ActionButton = ({ action }) => (
-    <TouchableOpacity style={tw`w-[48%] mb-4`}>
-      <View style={tw`${action.bgColor} p-4 rounded-xl flex-row items-center`}>
-        <MaterialCommunityIcons name={action.icon} size={24} color="white" />
-        <Text style={tw`text-white font-medium ml-2 flex-1`}>{action.label}</Text>
+     const ActionButton = ({ action }) => (
+      <TouchableOpacity style={tw`w-[48%] mb-4`}>
+        <View style={tw`${action.bgColor} p-4 rounded-xl flex-row items-center`}>
+          <MaterialCommunityIcons name={action.icon} size={24} color="white" />
+          <Text style={tw`text-white font-medium ml-2 flex-1`}>{action.label}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  
+    const TrendChart = ({ vital }) => (
+      <View style={tw`bg-white rounded-xl p-4 mb-4 shadow-sm`}>
+        <Text style={tw`text-base font-bold text-gray-900 mb-2`}>{vital.label} Trend</Text>
+        <LineChart
+          data={{
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+              data: vital.trend
+            }]
+          }}
+          width={width - 48}
+          height={180}
+          chartConfig={{
+            backgroundColor: '#ffffff',
+            backgroundGradientFrom: '#ffffff',
+            backgroundGradientTo: '#ffffff',
+            decimalPlaces: vital.id === 'sleep' ? 1 : 0,
+            color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+            style: { borderRadius: 16 },
+            propsForDots: {
+              r: '6',
+              strokeWidth: '2',
+              stroke: '#3B82F6'
+            }
+          }}
+          bezier
+          style={tw`rounded-xl`}
+        />
       </View>
-    </TouchableOpacity>
   );
-
-  const TrendChart = ({ vital }) => (
-    <View style={tw`bg-white rounded-xl p-4 mb-4 shadow-sm`}>
-      <Text style={tw`text-base font-bold text-gray-900 mb-2`}>{vital.label} Trend</Text>
-      <LineChart
-        data={{
-          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-          datasets: [{
-            data: vital.trend
-          }]
-        }}
-        width={width - 48}
-        height={180}
-        chartConfig={{
-          backgroundColor: '#ffffff',
-          backgroundGradientFrom: '#ffffff',
-          backgroundGradientTo: '#ffffff',
-          decimalPlaces: vital.id === 'sleep' ? 1 : 0,
-          color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-          style: { borderRadius: 16 },
-          propsForDots: {
-            r: '6',
-            strokeWidth: '2',
-            stroke: '#3B82F6'
-          }
-        }}
-        bezier
-        style={tw`rounded-xl`}
-      />
-    </View>
-  );
+  
+  
 
   return (
     <View style={tw`flex-1 bg-gray-50`}>
@@ -251,7 +272,7 @@ export default function PatientDashboard() {
                   style={tw`border-2 border-white mr-3`}
                 />
                 <View>
-                  <Text style={tw`text-xl font-bold text-gray-900`}>Hi, Sarah!</Text>
+                  <Text style={tw`text-xl font-bold text-gray-900`}>Hi, Sarah Johnson!</Text>
                   <Text style={tw`text-gray-600`}>Welcome back</Text>
                 </View>
               </View>
@@ -357,14 +378,7 @@ export default function PatientDashboard() {
             ))}
           </View>
         </View>
-      </View>
-
-      {/* Floating Action Button */}
-      <TouchableOpacity
-        style={tw`absolute bottom-20 right-4 bg-blue-500 w-14 h-14 rounded-full items-center justify-center shadow-lg`}
-      >
-        <MaterialCommunityIcons name="plus" size={30} color="white" />
-      </TouchableOpacity>
+      </View> 
     </View>
   );
 }

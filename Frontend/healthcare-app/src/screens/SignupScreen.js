@@ -29,7 +29,7 @@ const SignupScreen = ({ navigation }) => {
 
       console.log("Sending user data:", userData);
 
-      const response = await fetch("http://10.0.2.2:5000/api/auth/register", {
+      const response = await fetch("http://192.168.154.254:5000/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData),
